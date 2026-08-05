@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>剧本工作室 · 协作版</title>
+<style>
+:root{
+  --bg:#f5f6fa; --card:#fff; --border:#e8eaf0;
+  --text:#1a1a2e; --text2:#6b7280; --text3:#9ca3af;
+  --primary:#4f46e5; --primary-light:#eef0ff;
+  --premium:#7c3aed; --premium-light:#f3eeff;
+  --basic:#0ea5e9; --basic-light:#e6f6fe;
+  --success:#10b981; --success-light:#e7f9f1;
+  --warning:#f59e0b; --warning-light:#fef5e7;
+  --danger:#ef4444; --danger-light:#fdeaea;
+  --gray:#9ca3af; --gray-light:#f3f4f6;
+  --radius:12px; --shadow:0 2px 8px rgba(0,0,0,.06);
+  --shadow-lg:0 8px 30px rgba(0,0,0,.12);
+  --avatar-1:#4f46e5; --avatar-2:#7c3aed; --avatar-3:#0ea5e9; --avatar-4:#10b981; --avatar-5:#f59e0b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.6;
+  -webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom);
+}
+svg{display:block;flex-shrink:0}
+input,select,textarea{font-size:16px;font-family:inherit}
+
+/* ── Login Overlay ── */
+.login-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#1a1a2e 0%,#4f46e5 100%);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.login-overlay.hidden{display:none}
+.login-card{background:var(--card);border-radius:16px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.login-logo{width:60px;height:60px;background:linear-gradient(135deg,var(--primary),var(--premium));border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.login-logo svg{width:32px;height:32px;color:#fff}
+.login-card h1{font-size:22px;font-weight:800;text-align:center;margin-bottom:4px}
+.login-card .sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:8px}
+.login-card .team-hint{font-size:11px;color:var(--text3);text-align:center;margin-bottom:20px;background:var(--primary-light);padding:6px 12px;border-radius:20px;display:inline-block;margin-left:50%;transform:translateX(-50%)}
+.login-field{margin-bottom:14px}
+.login-field label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px}
+.login-field input,.login-field select{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;background:var(--card);transition:border .15s}
+.login-field input:focus,.login-field select:focus{border-color:var(--primary)}
+.team-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.team-member{flex:1;min-width:calc(50% - 4px);padding:12px;border:2px solid var(--border);border-radius:10px;cursor:pointer;text-align:center;transition:all .15s}
+.team-member:hover{border-color:var(--primary);background:var(--primary-light)}
+.team-member.selected{border-color:var(--primary);background:var(--primary-light)}
+.team-member .avatar{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;margin-bottom:6px}
+.team-member .role{font-size:11px;color:var(--text2)}
+.team-member .name{font-size:13px;font-weight:700}
+.login-btn{width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+.login-btn:hover{background:#4338ca}
+.login-btn:disabled{background:var(--gray);cursor:not-allowed}
+
+/* ── Member Management Modal ── */
+.member-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.member-modal-overlay.hidden{display:none}
+.member-modal{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);position:relative}
+.member-modal h3{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.member-row{display:flex;align-items:center;gap:6px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.member-row:last-child{border-bottom:none}
+.member-row .m-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0}
+.member-row input,.member-row select{font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;outline:none;background:var(--card)}
+.member-row input:focus,.member-row select:focus{border-color:var(--primary)}
+.member-row .m-name{width:70px}
+.member-row .m-role{width:70px}
+.member-row .m-pass{width:65px;text-align:center}
+.member-row .m-actions{display:flex;gap:4px;margin-left:auto}
+.member-row .m-actions button{padding:4px 8px;font-size:11px;border-radius:5px;border:1px solid var(--border);background:var(--card);cursor:pointer;transition:all .12s}
+.member-row .m-actions .m-save{color:var(--success);border-color:var(--success)}
+.member-row .m-actions .m-save:hover{background:var(--success);color:#fff}
+.member-row .m-actions .m-del{color:var(--danger);border-color:var(--danger)}
+.member-row .m-actions .m-del:hover{background:var(--danger);color:#fff}
+.member-add-row{display:flex;align-items:center;gap:6px;padding:10px 0;border-top:2px dashed var(--border);margin-top:8px}
+.member-add-row input,.member-add-row select{font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;outline:none}
+.member-add-row input:focus,.member-add-row select:focus{border-color:var(--success)}
+.member-add-row .m-name{width:70px}
+.member-add-row .m-role{width:70px}
+.member-add-row .m-pass{width:65px;text-align:center}
+.member-modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.toast{position:absolute;bottom:-36px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:5px 14px;border-radius:14px;font-size:12px;white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.btn-copy{background:#10b981;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;transition:all .2s}
+.btn-copy:hover{background:#059669}
+
+/* ── App ── */
+.app{max-width:1200px;margin:0 auto;padding:16px;display:none}
+.app.active{display:block}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.header-left{display:flex;align-items:center;gap:10px}
+.logo{width:40px;height:40px;background:linear-gradient(135deg,var(--primary),var(--premium));border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(79,70,229,.3)}
+.header h1{font-size:20px;font-weight:700;letter-spacing:.5px}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.user-badge{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;background:var(--primary-light);border-radius:20px;font-size:12px;font-weight:600;color:var(--primary);white-space:nowrap}
+.save-indicator{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11px;color:var(--success);background:#e6f7ed;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.save-indicator.show{opacity:1}
+.conn-status{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11px;white-space:nowrap}
+.conn-status.online{color:var(--success);background:#e6f7ed}
+.conn-status.offline{color:var(--danger);background:var(--danger-light)}
+.conn-status .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.conn-status.online .dot{background:var(--success)}
+.conn-status.offline .dot{background:var(--danger)}
+.user-avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn svg{width:16px;height:16px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#4338ca}
+.btn-ghost{background:var(--card);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+.btn-danger{background:var(--danger-light);color:var(--danger)}
+.btn-danger:hover{background:var(--danger);color:#fff}
+.btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+.btn-accent{background:var(--premium);color:#fff}
+.btn-accent:hover{background:#6d28d9}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:var(--card);border-radius:var(--radius);padding:4px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.tab{flex:1;padding:10px 12px;text-align:center;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.tab svg{width:18px;height:18px}
+.tab.active{background:var(--primary);color:#fff;box-shadow:0 2px 6px rgba(79,70,229,.25)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);border:1px solid var(--border);text-align:center}
+.stat-num{font-size:28px;font-weight:800;line-height:1.2}
+.stat-label{font-size:11px;color:var(--text2);margin-top:2px}
+.stat-card.premium{border-left:3px solid var(--premium)}
+.stat-card.basic{border-left:3px solid var(--basic)}
+.stat-card.urgent{border-left:3px solid var(--danger)}
+.stat-card.done{border-left:3px solid var(--success)}
+
+/* Today Section */
+.today-section{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.today-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.today-header svg{width:20px;height:20px;color:var(--danger)}
+.today-header h3{font-size:15px;font-weight:700}
+.today-item{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.today-item:last-child{border-bottom:none}
+.today-item.overdue{color:var(--danger)}
+.today-info{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.today-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap}
+.today-badge.overdue{background:var(--danger-light);color:var(--danger)}
+.today-badge.today{background:var(--warning-light);color:var(--warning)}
+.today-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.today-meta{font-size:11px;color:var(--text3)}
+
+/* Project Cards */
+.section-title{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.project-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:16px}
+.project-card{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.project-card:hover{box-shadow:var(--shadow-lg);border-color:var(--primary)}
+.project-card.expanded{border-color:var(--primary);box-shadow:var(--shadow-lg)}
+.premium-card{border-left:4px solid var(--premium)}
+.basic-card{border-left:4px solid var(--basic)}
+.card-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-type{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap}
+.type-premium{background:var(--premium-light);color:var(--premium)}
+.type-basic{background:var(--basic-light);color:var(--basic)}
+.card-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:11px;color:var(--text2)}
+.card-meta span{display:flex;align-items:center;gap:4px}
+.card-meta svg{width:14px;height:14px}
+
+/* Progress Pipeline */
+.pipeline{margin-top:10px;display:none}
+.project-card.expanded .pipeline{display:block}
+.pipeline-bar{display:flex;gap:6px;margin-bottom:8px;overflow-x:auto}
+.progress-node{flex:1;min-width:70px;padding:8px 6px;border-radius:8px;text-align:center;font-size:11px;font-weight:600;cursor:pointer;background:var(--gray-light);color:var(--text3);transition:all .15s;position:relative;border:2px solid transparent}
+.progress-node.doing{background:var(--warning-light);color:var(--warning);border-color:var(--warning)}
+.progress-node.done{background:var(--success-light);color:var(--success);border-color:var(--success)}
+.progress-node.needfix{background:var(--danger-light);color:var(--danger);border-color:var(--danger)}
+.progress-node .node-date{font-size:10px;font-weight:400;color:var(--text3);margin-top:3px}
+.progress-node .node-date.overdue-date{color:var(--danger)}
+.progress-legend{display:flex;gap:12px;font-size:11px;color:var(--text3);flex-wrap:wrap}
+.progress-legend span{display:flex;align-items:center;gap:4px}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot-doing{background:var(--warning)}
+.dot-done{background:var(--success)}
+.dot-fix{background:var(--danger)}
+.dot-wait{background:var(--gray)}
+
+/* Card detail */
+.card-detail{margin-top:10px;display:none}
+.project-card.expanded .card-detail{display:block}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;font-size:12px}
+.detail-item{background:var(--gray-light);padding:8px 10px;border-radius:6px}
+.detail-item .label{color:var(--text3);font-size:10px}
+.detail-item .value{font-weight:600;word-break:break-all}
+.card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+
+/* Stage Dates */
+.stage-dates{margin-top:8px;font-size:11px;color:var(--text2)}
+.stage-dates table{width:100%;border-collapse:collapse}
+.stage-dates td{padding:3px 6px;border-bottom:1px solid var(--border)}
+.stage-dates td:first-child{font-weight:600;white-space:nowrap}
+.stage-dates .s-date{color:var(--text3)}
+.stage-dates .s-date.overdue-date{color:var(--danger)}
+
+/* Assignee tags */
+.assignee-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.assignee-tag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap}
+.a-main{background:#eef0ff;color:var(--primary)}
+.a-chief{background:#f3eeff;color:var(--premium)}
+.a-deputy{background:#e6f6fe;color:var(--basic)}
+.a-writer{background:#e7f9f1;color:var(--success)}
+
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:800;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:680px;margin:20px 0;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-row.full{grid-template-columns:1fr}
+.form-group{margin-bottom:12px}
+.form-group label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px}
+.form-input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;background:var(--card);transition:border .15s}
+.form-input:focus{border-color:var(--primary)}
+.form-radio-group{display:flex;gap:12px}
+.form-radio{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* Dynamic list (benchmarks, upgrades) */
+.dynamic-list{margin-bottom:8px}
+.dynamic-item{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.dynamic-item .form-input{flex:1}
+.del-btn{width:32px;height:32px;min-width:32px;padding:0;border:none;background:var(--danger-light);color:var(--danger);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.del-btn svg{width:16px;height:16px}
+.add-item-btn{font-size:12px;color:var(--primary);background:none;border:1px dashed var(--primary);padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;margin-top:4px;transition:all .15s}
+.add-item-btn:hover{background:var(--primary-light)}
+
+/* Status Selector */
+.status-selector{position:absolute;background:var(--card);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.15);padding:6px;z-index:900;display:none;border:1px solid var(--border)}
+.status-selector.show{display:block}
+.status-option{padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;border-radius:6px;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:background .1s}
+.status-option:hover{background:var(--gray-light)}
+.status-option .s-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Archive Panel */
+.archive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:16px}
+.archive-card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.archive-card:hover{border-color:var(--primary);box-shadow:var(--shadow-lg)}
+.archive-month{font-size:18px;font-weight:800;margin-bottom:4px}
+.archive-stats{display:flex;gap:12px;font-size:11px;color:var(--text2);flex-wrap:wrap}
+.archive-stats span{display:flex;align-items:center;gap:3px}
+.archive-empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.archive-empty svg{width:60px;height:60px;margin-bottom:12px;color:var(--gray)}
+
+/* Activity Log */
+.log-list{max-height:500px;overflow-y:auto}
+.log-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
+.log-time{color:var(--text3);white-space:nowrap;min-width:130px}
+.log-user-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0}
+.log-content{flex:1}
+.log-project{font-weight:600}
+.log-action{color:var(--text2)}
+.log-detail{color:var(--text3);font-size:11px}
+
+/* Archive Detail Modal */
+.archive-detail-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:850;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.archive-detail-overlay.show{display:flex}
+.archive-detail{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:800px;margin:20px 0;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.archive-detail h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.archive-detail .archive-meta{font-size:12px;color:var(--text2);margin-bottom:16px}
+.archive-readonly .project-card{cursor:default;pointer-events:none}
+.archive-readonly .project-card.expanded .pipeline,.archive-readonly .project-card.expanded .card-detail{display:block}
+
+/* Confirm Dialog */
+.confirm-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.confirm-overlay.show{display:flex}
+.confirm-dialog{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.confirm-dialog h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.confirm-dialog p{font-size:13px;color:var(--text2);margin-bottom:20px}
+
+/* Snapshot Banner */
+.snapshot-banner{background:linear-gradient(135deg,var(--premium-light),var(--primary-light));border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border:1px solid var(--primary);display:none}
+.snapshot-banner.show{display:flex}
+.snapshot-banner .s-text{font-size:13px;font-weight:600;color:var(--primary)}
+.snapshot-banner .s-hint{font-size:11px;color:var(--text2)}
+
+/* Report Overlay */
+.report-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:850;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.report-overlay.show{display:flex}
+.report-content{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:650px;margin:20px 0;box-shadow:0 20px 60px rgba(0,0,0,.2);white-space:pre-wrap;font-size:13px;line-height:1.8;max-height:80vh;overflow-y:auto}
+.copy-btn{margin-top:12px}
+
+/* Backup Reminder */
+.backup-reminder{background:var(--warning-light);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border:1px solid var(--warning);font-size:12px;font-weight:600;color:var(--warning)}
+.backup-reminder.show{display:flex}
+
+/* Responsive */
+@media(max-width:768px){
+  .form-row{grid-template-columns:1fr}
+  .tabs{overflow-x:auto}
+  .tab{font-size:11px;padding:8px 6px}
+  .tab svg{width:16px;height:16px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .header{flex-direction:column;align-items:flex-start}
+  .header-right{width:100%;justify-content:flex-start}
+  .archive-grid{grid-template-columns:1fr}
+  .log-time{min-width:100px;font-size:11px}
+  .pipeline-bar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .progress-node{min-width:60px;font-size:10px;padding:6px 4px}
+  .detail-grid{grid-template-columns:1fr 1fr}
+  .team-member{padding:10px 8px}
+}
+
+/* Tag: reminder badge */
+.reminder-badge{background:var(--premium-light);color:var(--premium);font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ Login Overlay ═══════════ -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+    <h1>剧本工作室 · 协作版</h1>
+    <div class="sub">多人实时协作 · 月度归档可查</div>
+    <div class="team-hint" id="teamHint">选择你的身份进入</div>
+    <div class="login-field"><label>工作室名称</label><input type="text" id="workspaceName" placeholder="如：星辰剧本工作室" maxlength="30"></div>
+    <div class="team-list" id="teamList"></div>
+    <div class="login-field"><label>密码（4位，首次设置）</label><input type="password" id="loginPass" placeholder="设置或输入 4 位数字密码" maxlength="4"></div>
+    <button class="login-btn" id="loginBtn" disabled>进入工作台</button>
+  </div>
+</div>
+
+<!-- ═══════════ App ═══════════ -->
+<div class="app" id="app">
+  <!-- Snapshot Banner -->
+  <div class="snapshot-banner" id="snapshotBanner">
+    <div><span class="s-text" id="snapshotText">上月数据尚未归档</span><br><span class="s-hint">每月 1 号自动提醒归档上月数据</span></div>
+    <button class="btn btn-accent btn-sm" onclick="archiveLastMonth()">归档上月</button>
+  </div>
+
+  <!-- Backup Reminder -->
+  <div class="backup-reminder" id="backupReminder">
+    <span id="backupText"></span>
+    <button class="btn btn-sm" style="background:var(--warning);color:#fff" onclick="exportData()">导出备份</button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="22" height="22"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <div><h1 id="headerTitle">剧本工作室</h1></div>
+    </div>
+    <div class="header-right">
+      <span class="user-badge" id="currentUserBadge"></span>
+      <span class="save-indicator" id="saveIndicator">已保存 ✓</span>
+      <span class="conn-status" id="connStatus" title="连线状态">● 离线</span>
+      <button class="btn btn-ghost btn-sm" id="btnMemberMgmt" style="display:none" onclick="openMemberMgmt()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>成员
+      </button>
+      <button class="btn btn-ghost btn-sm" id="btnShareLink" style="display:none" onclick="generateShareLink()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>分享
+      </button>
+      <button class="btn btn-ghost btn-sm" id="btnExport" onclick="exportData()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>导出
+      </button>
+      <button class="btn btn-ghost btn-sm" id="btnImport" onclick="document.getElementById('importFile').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>导入
+      </button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn btn-ghost btn-sm" onclick="logout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>切换身份
+      </button>
+    </div>
+  </div>
+
+  <!-- Today Section -->
+  <div class="today-section" id="todaySection">
+    <div class="today-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <h3>今天要处理</h3>
+    </div>
+    <div id="todayList"></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="projects" onclick="switchTab('projects')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>项目列表
+    </button>
+    <button class="tab" data-tab="collab" onclick="switchTab('collab')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>人员看板
+    </button>
+    <button class="tab" data-tab="archives" onclick="switchTab('archives')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>月度归档
+    </button>
+    <button class="tab" data-tab="logs" onclick="switchTab('logs')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>操作日志
+    </button>
+  </div>
+
+  <!-- Tab: Projects -->
+  <div class="tab-panel active" id="panel-projects">
+    <div class="stats" id="statsRow"></div>
+    <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--card);border-radius:8px;padding:3px;border:1px solid var(--border)">
+      <button class="subtab active" data-subtab="all" onclick="switchSubTab('all')" style="flex:1;padding:8px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:var(--primary);color:#fff;transition:all .15s">全部</button>
+      <button class="subtab" data-subtab="premium" onclick="switchSubTab('premium')" style="flex:1;padding:8px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s">精品剧本</button>
+      <button class="subtab" data-subtab="basic" onclick="switchSubTab('basic')" style="flex:1;padding:8px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s">基础剧本</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="section-title" id="projectSectionTitle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        全部项目
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>新建项目
+      </button>
+    </div>
+    <div class="project-grid" id="projectList"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn btn-ghost btn-sm" id="clearSampleBtn" onclick="clearSamples()">清空示例数据</button>
+    </div>
+  </div>
+
+  <!-- Tab: Collab -->
+  <div class="tab-panel" id="panel-collab">
+    <div class="section-title" style="margin-bottom:16px">人员负载看板</div>
+    <div id="collabView"></div>
+  </div>
+
+  <!-- Tab: Archives -->
+  <div class="tab-panel" id="panel-archives">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        历史月度归档
+      </div>
+      <button class="btn btn-accent btn-sm" onclick="snapshotCurrentMonth()">手动归档本月</button>
+    </div>
+    <div class="archive-grid" id="archiveList"></div>
+  </div>
+
+  <!-- Tab: Logs -->
+  <div class="tab-panel" id="panel-logs">
+    <div class="section-title" style="margin-bottom:12px">操作日志（最近 50 条）</div>
+    <div class="log-list" id="logList"></div>
+    <div style="margin-top:12px">
+      <button class="btn btn-danger btn-sm" onclick="clearLogs()">清空日志</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ Modal: New/Edit Project ═══════════ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">新建项目</h3>
+    <div class="form-row">
+      <div class="form-group"><label>项目名称*</label><input class="form-input" id="f_name" placeholder="剧本名称"></div>
+      <div class="form-group"><label>项目类型</label>
+        <div class="form-radio-group" style="padding-top:10px">
+          <label class="form-radio"><input type="radio" name="f_type" value="premium" checked> 精品剧本</label>
+          <label class="form-radio"><input type="radio" name="f_type" value="basic"> 基础剧本</label>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>开始时间</label><input class="form-input" type="date" id="f_startDate"></div>
+      <div class="form-group"><label>预计交稿</label><input class="form-input" type="date" id="f_expectedDate"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>负责人</label><input class="form-input" id="f_mainPerson" placeholder="团队负责人"></div>
+      <div class="form-group"><label>主编</label><input class="form-input" id="f_chiefEditor" placeholder="主编姓名"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>副主编</label><input class="form-input" id="f_deputyEditor" placeholder="副主编姓名"></div>
+      <div class="form-group"><label>负责编剧</label><input class="form-input" id="f_leadWriter" placeholder="编剧姓名"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>实际交稿</label><input class="form-input" type="date" id="f_actualDate"></div>
+      <div class="form-group"><label>状态</label>
+        <select class="form-input" id="f_overallStatus"><option value="active">进行中</option><option value="done">已完成</option><option value="paused">暂停</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>选题对标剧</label>
+      <div class="dynamic-list" id="benchmarkList"></div>
+      <button class="add-item-btn" onclick="addBenchmark()">+ 添加对标剧</button>
+    </div>
+    <div class="form-group"><label>升级迭代剧</label>
+      <div class="dynamic-list" id="upgradeList"></div>
+      <button class="add-item-btn" onclick="addUpgrade()">+ 添加迭代剧</button>
+    </div>
+    <div class="form-group"><label>各节点时间</label>
+      <div class="stage-dates" id="stageDatesForm"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveProject()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ Status Selector ═══════════ -->
+<div class="status-selector" id="statusSelector">
+  <div class="status-option" onclick="setProgressStatus(0)"><span class="s-dot" style="background:var(--gray)"></span>未开始</div>
+  <div class="status-option" onclick="setProgressStatus(1)"><span class="s-dot" style="background:var(--warning)"></span>进行中</div>
+  <div class="status-option" onclick="setProgressStatus(2)"><span class="s-dot" style="background:var(--success)"></span>已完成</div>
+  <div class="status-option" onclick="setProgressStatus(3)"><span class="s-dot" style="background:var(--danger)"></span>需修改</div>
+</div>
+
+<!-- ═══════════ Report Overlay ═══════════ -->
+<div class="report-overlay" id="reportOverlay">
+  <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:650px;margin:20px 0;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:85vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:16px;font-weight:700">文字报告</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeReport()">关闭</button>
+    </div>
+    <div class="report-content" id="reportContent" style="flex:1;overflow-y:auto"></div>
+    <button class="btn btn-primary btn-sm copy-btn" onclick="copyReport()">一键复制</button>
+  </div>
+</div>
+
+<!-- ═══════════ Archive Detail Modal ═══════════ -->
+<div class="archive-detail-overlay" id="archiveDetailOverlay">
+  <div class="archive-detail">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <h3 id="archiveDetailTitle">月度归档详情</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeArchiveDetail()">关闭</button>
+    </div>
+    <div class="archive-meta" id="archiveDetailMeta"></div>
+    <div class="archive-readonly" id="archiveDetailContent"></div>
+  </div>
+</div>
+
+<!-- ═══════════ Confirm Overlay ═══════════ -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-dialog">
+    <h3 id="confirmTitle"></h3>
+    <p id="confirmText"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="hideConfirm()">取消</button>
+      <button class="btn btn-danger btn-sm" onclick="executeConfirm()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ Member Management Modal ═══════════ -->
+<div class="member-modal-overlay hidden" id="memberModalOverlay">
+  <div class="member-modal">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>成员管理</h3>
+    <div id="memberListEdit" style="margin-bottom:12px"></div>
+    <div class="member-add-row">
+      <span class="m-avatar" style="background:var(--success)">+</span>
+      <input type="text" class="m-name" id="newMemberName" placeholder="姓名" maxlength="8">
+      <input type="text" class="m-role" id="newMemberRole" placeholder="角色" maxlength="8">
+      <input type="text" class="m-pass" id="newMemberPass" placeholder="密码" maxlength="4">
+      <select id="newMemberColor" style="width:36px;padding:4px 0;text-align:center;font-size:13px">
+        <option value="0">●</option><option value="1">●</option><option value="2">●</option><option value="3">●</option><option value="4">●</option><option value="5">●</option><option value="6">●</option><option value="7">●</option>
+      </select>
+      <button class="btn btn-sm" style="background:var(--success);color:#fff;font-size:11px;padding:4px 10px" onclick="addMember()">添加</button>
+    </div>
+    <div class="member-modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="resetMembers()">恢复默认</button>
+      <button class="btn btn-primary btn-sm" onclick="closeMemberMgmt()">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ Share Modal ═══════════ -->
+<div class="member-modal-overlay hidden" id="shareModalOverlay">
+  <div class="member-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0">分享协作者链接</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeShareModal()">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin:0 0 12px">链接包含了当前成员列表，协作者打开即可看到最新成员。</p>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="shareLinkInput" readonly style="flex:1;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg)">
+      <button class="btn btn-primary btn-sm" onclick="copyShareLink()">复制</button>
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin:8px 0 0">⚠ 修改成员后需重新生成链接再分享。</p>
+    <div id="shareToast" class="toast">已复制到剪贴板 ✓</div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ Constants ═══════════ */
+const STAGE_KEYS=['outline','epguide','card1','card2','fullbook'];
+const STAGE_LABELS={outline:'大纲',epguide:'集纲',card1:'一卡',card2:'二卡',fullbook:'全本'};
+const STATUS_CLASS={0:'',1:'doing',2:'done',3:'needfix'};
+const STATUS_LABEL={0:'未开始',1:'进行中',2:'已完成',3:'需修改'};
+const STORAGE_KEY='wb_scstudio_collab_';
+const AVATAR_COLORS=['#4f46e5','#7c3aed','#0ea5e9','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6'];
+
+let currentUser=null;
+let allUsers=[];
+let projects=[];
+let archives={};
+let activityLog=[];
+let workspaceName='豆豆王西安工作室';
+let editingId=null;
+let currentProgressProject=null;
+let currentProgressStage=null;
+let confirmCallback=null;
+let activeTab='projects';
+let subTab='all';
+let saveFlashTimer=null;
+let sseConnected=false;
+
+/* ═══════════ Default Users ═══════════ */
+const DEFAULT_USERS=[
+  {id:'u1',name:'知宴',role:'负责人',color:0,password:'1111'},
+  {id:'u2',name:'王思怡',role:'主编',color:1,password:'2222'},
+  {id:'u3',name:'王副编',role:'副主编',color:2,password:'3333'},
+  {id:'u4',name:'赵编剧',role:'编剧',color:3,password:'4444'},
+  {id:'u5',name:'陈编剧',role:'编剧',color:4,password:'5555'},
+];
+
+/* ═══════════ API ═══════════ */
+async function apiGet(path){const r=await fetch(path);if(!r.ok)throw new Error(r.status);return r.json()}
+async function apiPost(path,body){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error(r.status);return r.json()}
+async function apiPut(path,body){const r=await fetch(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error(r.status);return r.json()}
+async function apiDelete(path,body){const r=await fetch(path,{method:'DELETE',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):null});if(!r.ok)throw new Error(r.status);return r.json()}
+
+/* ═══════════ LocalStorage (users cache + workspace name only) ═══════════ */
+function loadUsersFromLocal(){try{const v=localStorage.getItem(STORAGE_KEY+'users');return v?JSON.parse(v):[...DEFAULT_USERS]}catch(e){return[...DEFAULT_USERS]}}
+function saveUsersToLocal(){try{localStorage.setItem(STORAGE_KEY+'users',JSON.stringify(allUsers))}catch(e){}}
+function loadWorkspaceName(){try{return localStorage.getItem(STORAGE_KEY+'wname')||'豆豆王西安工作室'}catch(e){return'豆豆王西安工作室'}}
+function saveWorkspaceName(v){try{localStorage.setItem(STORAGE_KEY+'wname',v)}catch(e){}}
+
+/* ═══════════ Connection Status ═══════════ */
+function setConnStatus(online){
+  sseConnected=online;
+  const el=document.getElementById('connStatus');
+  if(!el)return;
+  if(online){el.className='conn-status online';el.innerHTML='<span class="dot"></span>已连线'}
+  else{el.className='conn-status offline';el.innerHTML='<span class="dot"></span>离线'}
+}
+
+function flashSaved(){
+  const el=document.getElementById('saveIndicator');
+  if(!el)return;
+  el.classList.add('show');
+  if(saveFlashTimer)clearTimeout(saveFlashTimer);
+  saveFlashTimer=setTimeout(()=>el.classList.remove('show'),1500);
+}
+
+/* ═══════════ SSE — Real-time Updates ═══════════ */
+function connectSSE(){
+  const es=new EventSource('/api/stream');
+  es.onopen=()=>{sseConnected=true;setConnStatus(true);console.log('SSE connected')};
+  es.addEventListener('dataUpdate',function(e){
+    try{
+      const data=JSON.parse(e.data);
+      let changed=false;
+      if(data.projects!==undefined){projects=data.projects;changed=true}
+      if(data.activityLog!==undefined){activityLog=data.activityLog;changed=true}
+      if(data.archives!==undefined){archives=data.archives;changed=true}
+      if(changed){render();flashSaved()}
+    }catch(err){console.warn('SSE parse error:',err)}
+  });
+  es.addEventListener('usersUpdate',function(e){
+    try{const data=JSON.parse(e.data);if(data.users){allUsers=data.users;saveUsersToLocal();renderTeamList();bindTeamListEvents();updateLoginBtn()}}catch(err){}
+  });
+  es.onerror=()=>{sseConnected=false;setConnStatus(false);console.log('SSE disconnected')};
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible'&&!sseConnected)window.location.reload();
+  });
+}
+
+/* ═══════════ Login Initialization ═══════════ */
+function initLogin(){
+  allUsers=loadUsersFromLocal();
+  // Check URL for shared users
+  const params=new URLSearchParams(window.location.search);
+  const shareData=params.get('share');
+  if(shareData){
+    try{
+      const json=decodeURIComponent(escape(atob(shareData)));
+      const sharedUsers=JSON.parse(json);
+      if(Array.isArray(sharedUsers)&&sharedUsers.length){allUsers=sharedUsers;saveUsersToLocal();history.replaceState(null,'',window.location.pathname)}
+    }catch(e){}
+  }
+  // Ensure defaults exist
+  DEFAULT_USERS.forEach(du=>{if(!allUsers.find(u=>u.id===du.id))allUsers.push({...du})});
+  saveUsersToLocal();
+  renderTeamList();
+  document.getElementById('workspaceName').value=loadWorkspaceName();
+  document.getElementById('workspaceName').addEventListener('input',function(){const v=this.value.trim()||'豆豆王西安工作室';saveWorkspaceName(v);updateLoginBtn()});
+  document.getElementById('loginPass').addEventListener('input',updateLoginBtn);
+  bindTeamListEvents();
+}
+
+function renderTeamList(){
+  const list=document.getElementById('teamList');
+  list.innerHTML=allUsers.map(u=>`
+    <div class="team-member" data-uid="${u.id}">
+      <div class="avatar" style="background:${AVATAR_COLORS[u.color||0]}">${u.name[0]}</div>
+      <div class="name">${esc(u.name)}</div>
+      <div class="role">${esc(u.role)}</div>
+    </div>`).join('');
+}
+function bindTeamListEvents(){
+  document.querySelectorAll('#teamList .team-member').forEach(el=>{el.addEventListener('click',function(){selectMember(this)})});
+}
+
+function selectMember(el){
+  document.querySelectorAll('#teamList .team-member').forEach(m=>m.classList.remove('selected'));
+  el.classList.add('selected');
+  updateLoginBtn();
+}
+
+function updateLoginBtn(){
+  const selected=document.getElementById('teamList').querySelector('.selected');
+  const pass=document.getElementById('loginPass').value.trim();
+  const name=document.getElementById('workspaceName').value.trim();
+  document.getElementById('loginBtn').disabled=!selected||!name||pass.length<4;
+}
+
+/* ═══════════ Member Management ═══════════ */
+function openMemberMgmt(){
+  renderMemberMgmtList();
+  document.getElementById('memberModalOverlay').classList.remove('hidden');
+}
+function closeMemberMgmt(){
+  document.getElementById('memberModalOverlay').classList.add('hidden');
+  renderTeamList();bindTeamListEvents();
+  saveUsersToLocal();
+  // Sync to server so other clients get the update
+  apiPut('/api/users',{users:allUsers}).catch(()=>{});
+}
+function renderMemberMgmtList(){
+  const container=document.getElementById('memberListEdit');
+  container.innerHTML=allUsers.map(u=>`
+    <div class="member-row" data-eid="${u.id}">
+      <span class="m-avatar" style="background:${AVATAR_COLORS[u.color||0]}">${u.name[0]}</span>
+      <input type="text" class="m-name" value="${esc(u.name)}" placeholder="姓名">
+      <input type="text" class="m-role" value="${esc(u.role)}" placeholder="角色">
+      <input type="text" class="m-pass" value="${esc(u.password||'')}" placeholder="密码" maxlength="4">
+      <select class="m-color" style="width:36px;padding:3px 0;text-align:center;font-size:12px">
+        ${AVATAR_COLORS.map((c,i)=>`<option value="${i}" ${i===u.color?'selected':''}>●</option>`).join('')}
+      </select>
+      <div class="m-actions">
+        <button class="m-save" onclick="saveMember('${u.id}',this)">保存</button>
+        <button class="m-del" onclick="deleteMember('${u.id}')">删除</button>
+      </div>
+    </div>`).join('');
+}
+function addMember(){
+  const name=document.getElementById('newMemberName').value.trim();
+  const role=document.getElementById('newMemberRole').value.trim();
+  const pass=document.getElementById('newMemberPass').value.trim();
+  const color=parseInt(document.getElementById('newMemberColor').value);
+  if(!name||!role){alert('姓名和角色不能为空');return}
+  const maxId=allUsers.reduce((max,u)=>{const n=parseInt(u.id.replace('u',''));return n>max?n:max},0);
+  allUsers.push({id:'u'+(maxId+1),name,role,color,password:pass});
+  document.getElementById('newMemberName').value='';
+  document.getElementById('newMemberRole').value='';
+  document.getElementById('newMemberPass').value='';
+  renderMemberMgmtList();
+}
+function saveMember(id,btn){
+  const row=btn.closest('.member-row');
+  const inputs=row.querySelectorAll('input');
+  const name=inputs[0].value.trim();
+  const role=inputs[1].value.trim();
+  const pass=inputs[2].value.trim();
+  const color=parseInt(row.querySelector('select').value);
+  if(!name||!role){alert('姓名和角色不能为空');return}
+  const user=allUsers.find(u=>u.id===id);
+  if(!user)return;
+  user.name=name;user.role=role;user.password=pass;user.color=color;
+  btn.textContent='已保存';btn.style.background='var(--success)';btn.style.color='#fff';
+  setTimeout(()=>{btn.textContent='保存';btn.style.background='';btn.style.color=''},800);
+}
+function deleteMember(id){
+  if(allUsers.length<=1){alert('至少保留一位成员');return}
+  const user=allUsers.find(u=>u.id===id);
+  if(!user)return;
+  if(!confirm(`确定删除成员「${user.name}」吗？\n该成员的项目数据不会丢失，但其身份将无法再登录。`))return;
+  allUsers=allUsers.filter(u=>u.id!==id);
+  renderMemberMgmtList();
+}
+function resetMembers(){
+  if(!confirm('确定恢复为默认成员列表吗？\n当前所有自定义成员将被覆盖。'))return;
+  allUsers=DEFAULT_USERS.map(u=>({...u}));
+  renderMemberMgmtList();
+}
+
+/* ═══════════ Share Link ═══════════ */
+function generateShareLink(){
+  const data=JSON.stringify(allUsers);
+  const param='share='+btoa(unescape(encodeURIComponent(data)));
+  const url=window.location.origin+window.location.pathname+'?'+param;
+  document.getElementById('shareLinkInput').value=url;
+  document.getElementById('shareModalOverlay').classList.remove('hidden');
+}
+function closeShareModal(){document.getElementById('shareModalOverlay').classList.add('hidden')}
+function copyShareLink(){
+  const input=document.getElementById('shareLinkInput');
+  input.select();document.execCommand('copy');
+  navigator.clipboard?.writeText(input.value).catch(()=>{});
+  const toast=document.getElementById('shareToast');
+  toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800);
+}
+
+/* ═══════════ Login Button ═══════════ */
+document.getElementById('loginBtn').addEventListener('click',async function(){
+  const selectedEl=document.getElementById('teamList').querySelector('.selected');
+  if(!selectedEl)return;
+  const uid=selectedEl.dataset.uid;
+  const user=allUsers.find(u=>u.id===uid);
+  if(!user)return;
+  const pass=document.getElementById('loginPass').value.trim();
+  if(pass.length!==4)return;
+
+  const wname=document.getElementById('workspaceName').value.trim()||'豆豆王西安工作室';
+  saveWorkspaceName(wname);
+
+  // Authenticate via server
+  try{
+    const result=await apiPost('/api/login',{userId:uid,password:pass,workspaceName:wname});
+    currentUser=result.user||user;
+    workspaceName=result.workspaceName||wname;
+  }catch(err){
+    if(err.message==='401'){alert('密码错误');return}
+    if(err.message==='404'){alert('用户不存在');return}
+    // Fallback: local auth
+    if(user.password&&user.password!==pass){alert('密码错误');return}
+    if(!user.password){user.password=pass;saveUsersToLocal()}
+    currentUser=user;
+  }
+
+  // Fetch full data from server
+  try{
+    const data=await apiGet('/api/data');
+    projects=data.projects||[];
+    archives=data.archives||{};
+    activityLog=data.activityLog||[];
+    if(data.users)allUsers=data.users;
+    if(data.workspaceName)workspaceName=data.workspaceName;
+  }catch(err){console.warn('Failed to load data from server, using empty state')}
+
+  // Connect SSE for real-time updates
+  connectSSE();
+
+  // Show app
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('app').classList.add('active');
+  document.getElementById('headerTitle').textContent=workspaceName;
+  document.getElementById('currentUserBadge').innerHTML=`<span class="user-avatar" style="background:${AVATAR_COLORS[currentUser.color||0]}">${currentUser.name[0]}</span>${esc(currentUser.name)} · ${esc(currentUser.role)}`;
+
+  // Permissions
+  const isAdmin=currentUser.role==='负责人';
+  document.getElementById('btnMemberMgmt').style.display=isAdmin?'':'none';
+  document.getElementById('btnExport').style.display=isAdmin?'':'none';
+  document.getElementById('btnImport').style.display=isAdmin?'':'none';
+  document.getElementById('btnShareLink').style.display=isAdmin?'':'none';
+  document.getElementById('snapshotBanner').style.display=isAdmin?'':'none';
+
+  if(!projects.length)await initSampleData();
+  checkSnapshotReminder();
+  render();
+});
+
+function logout(){
+  currentUser=null;projects=[];archives={};activityLog=[];
+  sseConnected=false;setConnStatus(false);
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('loginPass').value='';
+  renderTeamList();bindTeamListEvents();updateLoginBtn();
+}
+
+/* ═══════════ Sample Data ═══════════ */
+async function initSampleData(){
+  const now=new Date();
+  const d=(off)=>new Date(now.getFullYear(),now.getMonth(),now.getDate()+off).toISOString().slice(0,10);
+  const samples=[
+    {id:'s1',name:'龙凤呈祥',type:'premium',startDate:d(-35),expectedDate:d(-5),actualDate:'',overallStatus:'active',mainPerson:'知宴',chiefEditor:'王思怡',deputyEditor:'王副编',leadWriter:'赵编剧',benchmarks:[{name:'庆余年',achievement:'日活500万'},{name:'赘婿',achievement:'均集播放1.2亿'}],upgrades:[{name:'龙凤呈祥第一季',approach:'强化反派线'}],progress:{outline:{status:2,expectedDate:d(-30),actualDate:d(-30)},epguide:{status:2,expectedDate:d(-20),actualDate:d(-18)},card1:{status:2,expectedDate:d(-10),actualDate:d(-8)},card2:{status:1,expectedDate:d(-3),actualDate:''},fullbook:{status:0,expectedDate:d(10),actualDate:''}},_updatedBy:'知宴',_updatedAt:new Date().toLocaleString()},
+    {id:'s2',name:'春风渡',type:'premium',startDate:d(-25),expectedDate:d(20),actualDate:'',overallStatus:'active',mainPerson:'知宴',chiefEditor:'王思怡',deputyEditor:'王副编',leadWriter:'陈编剧',benchmarks:[{name:'东宫',achievement:'豆瓣8.5'}],upgrades:[],progress:{outline:{status:2,expectedDate:d(-20),actualDate:d(-19)},epguide:{status:2,expectedDate:d(-10),actualDate:d(-8)},card1:{status:1,expectedDate:d(5),actualDate:''},card2:{status:0,expectedDate:d(15),actualDate:''},fullbook:{status:0,expectedDate:d(30),actualDate:''}},_updatedBy:'王思怡',_updatedAt:new Date().toLocaleString()},
+    {id:'s3',name:'暗恋公式',type:'basic',startDate:d(-15),expectedDate:d(30),actualDate:'',overallStatus:'active',mainPerson:'知宴',chiefEditor:'王思怡',deputyEditor:'王副编',leadWriter:'赵编剧',benchmarks:[],upgrades:[{name:'暗恋公式第一季',approach:'增加支线CP'}],progress:{outline:{status:2,expectedDate:d(-10),actualDate:d(-9)},epguide:{status:1,expectedDate:d(3),actualDate:''},card1:{status:0,expectedDate:d(15),actualDate:''},card2:{status:0,expectedDate:d(22),actualDate:''},fullbook:{status:0,expectedDate:d(35),actualDate:''}},_updatedBy:'赵编剧',_updatedAt:new Date().toLocaleString()},
+    {id:'s4',name:'替身娇妻',type:'basic',startDate:d(-45),expectedDate:d(-15),actualDate:d(-15),overallStatus:'done',mainPerson:'知宴',chiefEditor:'王思怡',deputyEditor:'王副编',leadWriter:'陈编剧',benchmarks:[{name:'回家的诱惑',achievement:'收视率3.5%'}],upgrades:[],progress:{outline:{status:2,expectedDate:d(-40),actualDate:d(-38)},epguide:{status:2,expectedDate:d(-30),actualDate:d(-28)},card1:{status:2,expectedDate:d(-25),actualDate:d(-24)},card2:{status:2,expectedDate:d(-20),actualDate:d(-19)},fullbook:{status:2,expectedDate:d(-15),actualDate:d(-15)}},_updatedBy:'王思怡',_updatedAt:new Date().toLocaleString()},
+    {id:'s5',name:'重生千金',type:'premium',startDate:d(-20),expectedDate:d(25),actualDate:'',overallStatus:'active',mainPerson:'知宴',chiefEditor:'王思怡',deputyEditor:'王副编',leadWriter:'赵编剧',benchmarks:[{name:'甄嬛传',achievement:'经典宫斗IP'}],upgrades:[],progress:{outline:{status:2,expectedDate:d(-15),actualDate:d(-14)},epguide:{status:3,expectedDate:d(-5),actualDate:d(-3)},card1:{status:0,expectedDate:d(5),actualDate:''},card2:{status:0,expectedDate:d(15),actualDate:''},fullbook:{status:0,expectedDate:d(25),actualDate:''}},_updatedBy:'王思怡',_updatedAt:new Date().toLocaleString()},
+  ];
+  const logEntry={time:new Date().toLocaleString(),user:{name:'系统',color:0},action:'初始化示例数据',project:'',detail:'创建 5 个示例项目'};
+  await apiPut('/api/data',{projects:samples,activityLog:[logEntry]}).catch(()=>{projects=samples;activityLog=[logEntry]});
+}
+
+/* ═══════════ Helper: make log entry ═══════════ */
+function mkLog(action,project,detail){
+  return {time:new Date().toLocaleString(),user:{name:currentUser?currentUser.name:'系统',color:currentUser?currentUser.color||0:0},action,project,detail:detail||''};
+}
+
+/* ═══════════ Render ═══════════ */
+function render(){
+  renderStats();
+  renderToday();
+  renderProjectList();
+  renderCollab();
+  renderArchives();
+  renderLogs();
+  renderCurrentTab();
+  checkBackupReminder();
+}
+
+function renderCurrentTab(){
+  if(activeTab==='projects'){renderProjectList();renderStats();renderToday()}
+  if(activeTab==='collab')renderCollab();
+  if(activeTab==='archives')renderArchives();
+  if(activeTab==='logs')renderLogs();
+}
+
+function switchTab(tab){
+  activeTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  renderCurrentTab();
+}
+
+function switchSubTab(st){
+  subTab=st;
+  document.querySelectorAll('.subtab').forEach(b=>{b.style.background='transparent';b.style.color='var(--text2)'});
+  const activeBtn=document.querySelector(`[data-subtab="${st}"]`);
+  if(activeBtn){activeBtn.style.background='var(--primary)';activeBtn.style.color='#fff'}
+  if(st==='all')document.getElementById('projectSectionTitle').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>全部项目';
+  else if(st==='premium')document.getElementById('projectSectionTitle').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>精品剧本';
+  else document.getElementById('projectSectionTitle').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>基础剧本';
+  renderProjectList();
+}
+
+/* ── Stats ── */
+function renderStats(){
+  const total=projects.length;
+  const premium=projects.filter(p=>p.type==='premium').length;
+  const basic=projects.filter(p=>p.type==='basic').length;
+  const overdue=projects.filter(p=>isOverdue(p)).length;
+  const done=projects.filter(p=>p.overallStatus==='done').length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card premium"><div class="stat-num" style="color:var(--premium)">${premium}</div><div class="stat-label">精品剧本</div></div>
+    <div class="stat-card basic"><div class="stat-num" style="color:var(--basic)">${basic}</div><div class="stat-label">基础剧本</div></div>
+    <div class="stat-card urgent"><div class="stat-num" style="color:var(--danger)">${overdue}</div><div class="stat-label">逾期项目</div></div>
+    <div class="stat-card done"><div class="stat-num" style="color:var(--success)">${done}</div><div class="stat-label">已完成</div></div>`;
+}
+
+/* ── Today ── */
+function renderToday(){
+  const today=new Date().toISOString().slice(0,10);
+  const items=[];
+  projects.forEach(p=>{
+    if(p.overallStatus==='done')return;
+    if(p.expectedDate&&p.expectedDate<today&&!p.actualDate)items.push({id:p.id,name:p.name,type:'overdue',date:p.expectedDate,stage:'交稿逾期',desc:'预计 '+p.expectedDate});
+    STAGE_KEYS.forEach(k=>{
+      const s=p.progress?.[k];
+      if(!s||s.status===2)return;
+      if(s.expectedDate&&s.expectedDate<today)items.push({id:p.id,name:p.name,type:'overdue',date:s.expectedDate,stage:STAGE_LABELS[k]+'逾期',desc:'节点截止 '+s.expectedDate});
+    });
+    STAGE_KEYS.forEach(k=>{
+      const s=p.progress?.[k];
+      if(!s||s.status===2)return;
+      if(s.expectedDate===today)items.push({id:p.id,name:p.name,type:'today',date:today,stage:STAGE_LABELS[k]+'截止',desc:'今日截止'});
+    });
+  });
+  const seen=new Set();
+  const unique=items.filter(it=>{const key=it.id+it.stage;if(seen.has(key))return false;seen.add(key);return true});
+  unique.sort((a,b)=>a.type==='overdue'?-1:1);
+  if(!unique.length){document.getElementById('todayList').innerHTML='<div style="font-size:13px;color:var(--text3);padding:8px 0">暂无待处理事项 🎉</div>';return}
+  document.getElementById('todayList').innerHTML=unique.map(it=>`
+    <div class="today-item ${it.type==='overdue'?'overdue':''}">
+      <div class="today-info">
+        <span class="today-badge ${it.type==='overdue'?'overdue':'today'}">${it.type==='overdue'?'逾期':'今天'}</span>
+        <span class="today-name">${esc(it.name)}</span>
+        <span class="today-meta">· ${esc(it.stage)}</span>
+      </div>
+      <button class="btn btn-sm ${it.type==='overdue'?'btn-danger':'btn-primary'}" onclick="scrollToProject('${it.id}')">处理</button>
+    </div>`).join('');
+}
+
+/* ── Project List ── */
+function renderProjectList(){
+  const list=document.getElementById('projectList');
+  let filtered=[...projects];
+  if(subTab==='premium')filtered=filtered.filter(p=>p.type==='premium');
+  else if(subTab==='basic')filtered=filtered.filter(p=>p.type==='basic');
+  if(!filtered.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">暂无项目，点击「新建项目」开始</div>';return}
+  const today=new Date().toISOString().slice(0,10);
+  const sorted=[...filtered].sort((a,b)=>{
+    const aOver=a.expectedDate&&a.expectedDate<today&&!a.actualDate?1:0;
+    const bOver=b.expectedDate&&b.expectedDate<today&&!b.actualDate?1:0;
+    if(aOver!==bOver)return bOver-aOver;
+    return (b.startDate||'').localeCompare(a.startDate||'');
+  });
+  list.innerHTML=sorted.map(p=>renderProjectCard(p)).join('');
+}
+
+function renderProjectCard(p){
+  const today=new Date().toISOString().slice(0,10);
+  const isOver=p.expectedDate&&p.expectedDate<today&&!p.actualDate&&p.overallStatus!=='done';
+  const expandedClass=editingId===p.id?'expanded':'';
+  const typeClass=p.type==='premium'?'premium-card':'basic-card';
+  const typeLabelClass=p.type==='premium'?'type-premium':'type-basic';
+  const typeLabel=p.type==='premium'?'精品':'基础';
+
+  let pipelineHTML='';
+  if(p.progress){
+    pipelineHTML=`<div class="pipeline-bar">${STAGE_KEYS.map(k=>{
+      const s=p.progress[k]||{status:0,expectedDate:'',actualDate:''};
+      const cls=STATUS_CLASS[s.status]||'';
+      const label=STATUS_LABEL[s.status]||'未开始';
+      const dateOver=s.expectedDate&&s.expectedDate<today&&s.status!==2?'overdue-date':'';
+      const dateStr=s.actualDate||s.expectedDate||'';
+      const dateLabel=s.actualDate?'实际:'+s.actualDate:(s.expectedDate?'预计:'+s.expectedDate:'');
+      return `<div class="progress-node ${cls}" onclick="openStatusSelector(event,'${p.id}','${k}')">${STAGE_LABELS[k]}<br>${label}<div class="node-date ${dateOver}">${dateLabel||'-'}</div></div>`;
+    }).join('')}</div>`;
+  }
+
+  const detailHTML=`
+    <div class="card-detail">
+      <div class="assignee-tags">
+        ${p.mainPerson?`<span class="assignee-tag a-main">负责人: ${esc(p.mainPerson)}</span>`:''}
+        ${p.chiefEditor?`<span class="assignee-tag a-chief">主编: ${esc(p.chiefEditor)}</span>`:''}
+        ${p.deputyEditor?`<span class="assignee-tag a-deputy">副主编: ${esc(p.deputyEditor)}</span>`:''}
+        ${p.leadWriter?`<span class="assignee-tag a-writer">编剧: ${esc(p.leadWriter)}</span>`:''}
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="label">开始时间</div><div class="value">${p.startDate||'-'}</div></div>
+        <div class="detail-item"><div class="label">预计交稿</div><div class="value">${p.expectedDate||'-'}</div></div>
+        <div class="detail-item"><div class="label">实际交稿</div><div class="value">${p.actualDate||'未交稿'}</div></div>
+        <div class="detail-item"><div class="label">最后更新</div><div class="value">${p._updatedBy||'-'} · ${(p._updatedAt||'').slice(0,10)||'-'}</div></div>
+      </div>
+      ${p.benchmarks&&p.benchmarks.length?`<div style="margin-top:8px;font-size:11px;color:var(--text2)">对标剧: ${p.benchmarks.map(b=>esc(b.name)+(b.achievement?'('+esc(b.achievement)+')':'')).join('、')}</div>`:''}
+      ${p.upgrades&&p.upgrades.length?`<div style="margin-top:4px;font-size:11px;color:var(--text2)">迭代剧: ${p.upgrades.map(u=>esc(u.name)+(u.approach?'('+esc(u.approach)+')':'')).join('、')}</div>`:''}
+      <div class="card-actions">
+        ${canEdit(p)?`
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openModal('${p.id}')">编辑</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();markDone('${p.id}')">${p.actualDate?'取消交稿':'标记已交稿'}</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteProject('${p.id}')">删除</button>
+        `:`<span style="font-size:11px;color:var(--text3);padding:4px 0">只读（非项目成员）</span>`}
+      </div>
+    </div>`;
+
+  return `
+    <div class="project-card ${typeClass} ${expandedClass}" id="card-${p.id}" onclick="toggleCard('${p.id}')">
+      <div class="card-row">
+        <span class="card-title">${esc(p.name)}</span>
+        <span class="card-type ${typeLabelClass}">${typeLabel}</span>
+      </div>
+      <div class="card-meta">
+        ${p.expectedDate?`<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${p.expectedDate}</span>`:''}
+        ${p.leadWriter?`<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(p.leadWriter)}</span>`:''}
+        ${isOver?'<span style="color:var(--danger);font-weight:700">逾期</span>':''}
+        ${p.overallStatus==='done'?'<span style="color:var(--success);font-weight:700">已完成</span>':''}
+      </div>
+      ${pipelineHTML}
+      ${detailHTML}
+    </div>`;
+}
+
+function toggleCard(id){
+  const card=document.getElementById('card-'+id);
+  if(card.classList.contains('expanded'))card.classList.remove('expanded');
+  else card.classList.add('expanded');
+}
+
+function scrollToProject(id){switchTab('projects');setTimeout(()=>{const el=document.getElementById('card-'+id);if(el){el.classList.add('expanded');el.scrollIntoView({behavior:'smooth',block:'center'})}},200)}
+
+function isOverdue(p){if(p.overallStatus==='done')return false;const today=new Date().toISOString().slice(0,10);if(p.expectedDate&&p.expectedDate<today&&!p.actualDate)return true;return STAGE_KEYS.some(k=>{const s=p.progress?.[k];return s&&s.status!==2&&s.expectedDate&&s.expectedDate<today})}
+
+/* ── Collab View ── */
+function renderCollab(){
+  const container=document.getElementById('collabView');
+  if(!projects.length){container.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">暂无项目数据</div>';return}
+  const personMap={};
+  projects.forEach(p=>{
+    const roles=[
+      {name:p.mainPerson,role:'负责人',cls:'a-main'},
+      {name:p.chiefEditor,role:'主编',cls:'a-chief'},
+      {name:p.deputyEditor,role:'副主编',cls:'a-deputy'},
+      {name:p.leadWriter,role:'编剧',cls:'a-writer'},
+    ];
+    roles.forEach(r=>{
+      if(!r.name)return;
+      if(!personMap[r.name])personMap[r.name]={name:r.name,roles:[...new Set([r.role])],projects:[],total:0,active:0,done:0};
+      personMap[r.name].roles=[...new Set([...personMap[r.name].roles,r.role])];
+      personMap[r.name].total++;
+      if(p.overallStatus==='done')personMap[r.name].done++;else personMap[r.name].active++;
+      personMap[r.name].projects.push({id:p.id,name:p.name,status:p.overallStatus,expectedDate:p.expectedDate,type:p.type});
+    });
+  });
+  const persons=Object.values(personMap);
+  const roleColors={负责人:0,主编:1,副主编:2,编剧:3};
+  container.innerHTML=persons.map((per,i)=>{
+    const colorIdx=Object.keys(roleColors).find(r=>per.roles.includes(r))?roleColors[Object.keys(roleColors).find(r=>per.roles.includes(r))||'编剧']:i%AVATAR_COLORS.length;
+    return`<div class="project-card" style="border-left:4px solid ${AVATAR_COLORS[colorIdx]};margin-bottom:10px;cursor:default">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div class="user-avatar" style="background:${AVATAR_COLORS[colorIdx]};width:36px;height:36px;font-size:14px">${per.name[0]}</div>
+        <div style="flex:1"><div style="font-weight:700">${esc(per.name)}</div><div style="font-size:11px;color:var(--text2)">${per.roles.join(' / ')}</div></div>
+        <div style="text-align:right"><div style="font-size:18px;font-weight:800">${per.total}</div><div style="font-size:10px;color:var(--text2)">负责项目 <span style="color:var(--success)">${per.done} 完成</span> · <span style="color:var(--warning)">${per.active} 进行中</span></div></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;font-size:11px">
+        ${per.projects.map(pr=>`<span style="padding:2px 8px;border-radius:6px;cursor:pointer;font-weight:600;${pr.status==='done'?'background:#e7f9f1;color:var(--success)':(pr.type==='premium'?'background:#f3eeff;color:var(--premium)':'background:#e6f6fe;color:var(--basic)')}" onclick="scrollToProject('${pr.id}')" title="预计交稿:${pr.expectedDate||'无'}">${esc(pr.name)}${pr.status==='done'?' ✓':''}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── Archives ── */
+function renderArchives(){
+  const list=document.getElementById('archiveList');
+  const archiveEntries=Object.entries(archives).sort((a,b)=>b[0].localeCompare(a[0]));
+  if(!archiveEntries.length){
+    list.innerHTML=`<div class="archive-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg><p>暂无归档记录</p><p style="font-size:12px;color:var(--text3)">每月月初可选择归档上月数据</p></div>`;
+    return;
+  }
+  list.innerHTML=archiveEntries.map(([key,arch])=>{
+    const pCount=arch.projects?arch.projects.length:0;
+    const doneCount=arch.projects?arch.projects.filter(p=>p.overallStatus==='done').length:0;
+    const [y,m]=key.split('-');
+    return`<div class="archive-card" onclick="openArchiveDetail('${key}')">
+      <div class="archive-month">${y}年${m}月</div>
+      <div class="archive-stats">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/></svg>${pCount} 个项目</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>${doneCount} 已完成</span>
+        <span style="font-size:10px;color:var(--text3)">归档于 ${arch.archivedAt?arch.archivedAt.slice(0,10):'-'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openArchiveDetail(ym){
+  const arch=archives[ym];
+  if(!arch)return;
+  const [y,m]=ym.split('-');
+  const pCount=arch.projects?arch.projects.length:0;
+  document.getElementById('archiveDetailTitle').textContent=`${y}年${m}月 · 归档详情`;
+  document.getElementById('archiveDetailMeta').textContent=`${pCount} 个项目 | 归档时间: ${arch.archivedAt||'-'} | 归档人: ${arch.archivedBy||'-'}`;
+  document.getElementById('archiveDetailContent').innerHTML=(arch.projects||[]).map(p=>{
+    const pipelineHTML=STAGE_KEYS.map(k=>{
+      const s=(p.progress&&p.progress[k])||{status:0,expectedDate:'',actualDate:''};
+      const cls=STATUS_CLASS[s.status]||'';
+      return`<div class="progress-node ${cls}" style="cursor:default;pointer-events:none">${STAGE_LABELS[k]}<br>${STATUS_LABEL[s.status]||'未开始'}<div class="node-date">${s.actualDate||s.expectedDate||'-'}</div></div>`;
+    }).join('');
+    return`<div class="project-card ${p.type==='premium'?'premium-card':'basic-card'} expanded" style="cursor:default;pointer-events:none;margin-bottom:8px">
+      <div class="card-row"><span class="card-title">${esc(p.name)}</span><span class="card-type ${p.type==='premium'?'type-premium':'type-basic'}">${p.type==='premium'?'精品':'基础'}</span></div>
+      <div class="card-meta">${p.expectedDate?`<span>交稿: ${p.expectedDate}</span>`:''}${p.leadWriter?`<span>编剧: ${esc(p.leadWriter)}</span>`:''}${p.overallStatus==='done'?'<span style="color:var(--success);font-weight:700">已完成</span>':''}</div>
+      <div class="pipeline"><div class="pipeline-bar">${pipelineHTML}</div></div>
+      <div class="card-detail"><div class="assignee-tags">${p.mainPerson?`<span class="assignee-tag a-main">${esc(p.mainPerson)}</span>`:''}${p.chiefEditor?`<span class="assignee-tag a-chief">${esc(p.chiefEditor)}</span>`:''}${p.deputyEditor?`<span class="assignee-tag a-deputy">${esc(p.deputyEditor)}</span>`:''}${p.leadWriter?`<span class="assignee-tag a-writer">${esc(p.leadWriter)}</span>`:''}</div></div>
+    </div>`;
+  }).join('')||'<div style="text-align:center;padding:20px;color:var(--text3)">该月无项目数据</div>';
+  document.getElementById('archiveDetailOverlay').classList.add('show');
+}
+
+function closeArchiveDetail(){document.getElementById('archiveDetailOverlay').classList.remove('show')}
+
+function snapshotCurrentMonth(){
+  const now=new Date();
+  const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if(archives[ym]){confirmAction('确认覆盖？',`${ym} 已有归档记录，是否覆盖？`,()=>{doArchive(ym)})}
+  else doArchive(ym);
+}
+
+async function doArchive(ym){
+  const body={
+    projects:JSON.parse(JSON.stringify(projects)),
+    archivedAt:new Date().toLocaleString(),
+    archivedBy:currentUser?currentUser.name:'系统',
+    _logEntry:mkLog('月度归档',ym,'手动归档当月数据')
+  };
+  await apiPost('/api/archive/'+ym,body).catch(()=>{});
+  checkSnapshotReminder();
+}
+
+function archiveLastMonth(){
+  const now=new Date();
+  let m=now.getMonth();let y=now.getFullYear();
+  if(m===0){m=12;y--}
+  const ym=`${y}-${String(m).padStart(2,'0')}`;
+  if(archives[ym]){alert(`${ym} 已有归档记录`);checkSnapshotReminder();return}
+  doArchive(ym);
+}
+
+function checkSnapshotReminder(){
+  const now=new Date();
+  let lastM=now.getMonth();let lastY=now.getFullYear();
+  if(lastM===0){lastM=12;lastY--}
+  const lastYM=`${lastY}-${String(lastM).padStart(2,'0')}`;
+  const banner=document.getElementById('snapshotBanner');
+  if(!archives[lastYM]&&projects.length>0&&now.getDate()<=15){
+    document.getElementById('snapshotText').textContent=`${lastYM} 的数据尚未归档`;
+    banner.classList.add('show');
+  }else{banner.classList.remove('show')}
+}
+
+/* ── Logs ── */
+function renderLogs(){
+  const list=document.getElementById('logList');
+  const logs=activityLog.slice(0,50);
+  if(!logs.length){list.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">暂无操作记录</div>';return}
+  list.innerHTML=logs.map(l=>`
+    <div class="log-item">
+      <div class="log-time">${l.time}</div>
+      <div class="log-user-avatar" style="background:${AVATAR_COLORS[l.user?.color||0]}">${(l.user?.name||'?')[0]}</div>
+      <div class="log-content">
+        <span style="font-weight:600">${esc(l.user?.name||'?')}</span>
+        <span class="log-action">· ${esc(l.action)}</span>
+        ${l.project?`<span class="log-project">· ${esc(l.project)}</span>`:''}
+        ${l.detail?`<div class="log-detail">${esc(l.detail)}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+async function clearLogs(){
+  confirmAction('清空操作日志？','将清除所有操作记录，不可恢复。',async()=>{await apiDelete('/api/logs').catch(()=>{})})
+}
+
+/* ═══════════ Backup Reminder ═══════════ */
+function checkBackupReminder(){
+  const reminder=document.getElementById('backupReminder');
+  const text=document.getElementById('backupText');
+  if(projects.length>=20||activityLog.length>=100){
+    text.textContent=`数据已积累 ${projects.length} 个项目、${activityLog.length} 条日志，建议导出备份`;
+    reminder.classList.add('show');
+  }else{reminder.classList.remove('show')}
+}
+
+/* ═══════════ Modal ═══════════ */
+function openModal(id){
+  if(id){const p=projects.find(x=>x.id===id);if(!p||!canEdit(p)){alert('只有项目成员才能编辑此项目');return}}
+  editingId=id||null;
+  document.getElementById('modalTitle').textContent=id?'编辑项目':'新建项目';
+  document.getElementById('f_name').value='';
+  document.querySelector('input[name="f_type"][value="premium"]').checked=true;
+  document.getElementById('f_startDate').value='';
+  document.getElementById('f_expectedDate').value='';
+  document.getElementById('f_actualDate').value='';
+  document.getElementById('f_mainPerson').value='';
+  document.getElementById('f_chiefEditor').value='';
+  document.getElementById('f_deputyEditor').value='';
+  document.getElementById('f_leadWriter').value='';
+  document.getElementById('f_overallStatus').value='active';
+  document.getElementById('benchmarkList').innerHTML='';
+  document.getElementById('upgradeList').innerHTML='';
+  renderStageDatesForm();
+  if(id){
+    const p=projects.find(x=>x.id===id);
+    if(p){
+      document.getElementById('f_name').value=p.name;
+      document.querySelector(`input[name="f_type"][value="${p.type||'premium'}"]`).checked=true;
+      document.getElementById('f_startDate').value=p.startDate||'';
+      document.getElementById('f_expectedDate').value=p.expectedDate||'';
+      document.getElementById('f_actualDate').value=p.actualDate||'';
+      document.getElementById('f_mainPerson').value=p.mainPerson||'';
+      document.getElementById('f_chiefEditor').value=p.chiefEditor||'';
+      document.getElementById('f_deputyEditor').value=p.deputyEditor||'';
+      document.getElementById('f_leadWriter').value=p.leadWriter||'';
+      document.getElementById('f_overallStatus').value=p.overallStatus||'active';
+      (p.benchmarks||[]).forEach(b=>addBenchmark(b.name,b.achievement));
+      (p.upgrades||[]).forEach(u=>addUpgrade(u.name,u.approach));
+      renderStageDatesForm(p.progress);
+    }
+  }
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');editingId=null}
+
+function addBenchmark(name,achievement){
+  const list=document.getElementById('benchmarkList');
+  const div=document.createElement('div');
+  div.className='dynamic-item';
+  div.innerHTML=`<input class="form-input" placeholder="剧名" value="${esc(name||'')}"><input class="form-input" placeholder="成绩（如日活200万）" value="${esc(achievement||'')}"><button class="del-btn" onclick="this.parentElement.remove()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  list.appendChild(div);
+}
+
+function addUpgrade(name,approach){
+  const list=document.getElementById('upgradeList');
+  const div=document.createElement('div');
+  div.className='dynamic-item';
+  div.innerHTML=`<input class="form-input" placeholder="剧名" value="${esc(name||'')}"><input class="form-input" placeholder="迭代思路" value="${esc(approach||'')}"><button class="del-btn" onclick="this.parentElement.remove()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  list.appendChild(div);
+}
+
+function renderStageDatesForm(progress){
+  const container=document.getElementById('stageDatesForm');
+  container.innerHTML=STAGE_KEYS.map(k=>{
+    const s=(progress&&progress[k])||{status:0,expectedDate:'',actualDate:''};
+    return`<div class="dynamic-item"><span style="font-size:13px;font-weight:600;min-width:50px">${STAGE_LABELS[k]}</span><input class="form-input" type="date" value="${s.expectedDate||''}" placeholder="预计时间" data-stage="${k}" data-field="expected"><input class="form-input" type="date" value="${s.actualDate||''}" placeholder="实际时间" data-stage="${k}" data-field="actual"></div>`;
+  }).join('');
+}
+
+async function saveProject(){
+  const name=document.getElementById('f_name').value.trim();
+  if(!name){alert('请输入项目名称');return}
+  if(editingId){const p=projects.find(x=>x.id===editingId);if(p&&!canEdit(p)){alert('只有项目成员才能编辑此项目');return}}
+  const type=document.querySelector('input[name="f_type"]:checked').value;
+  const startDate=document.getElementById('f_startDate').value;
+  const expectedDate=document.getElementById('f_expectedDate').value;
+  const actualDate=document.getElementById('f_actualDate').value;
+  const overallStatus=document.getElementById('f_overallStatus').value;
+  const mainPerson=document.getElementById('f_mainPerson').value.trim();
+  const chiefEditor=document.getElementById('f_chiefEditor').value.trim();
+  const deputyEditor=document.getElementById('f_deputyEditor').value.trim();
+  const leadWriter=document.getElementById('f_leadWriter').value.trim();
+  const benchmarks=[];document.querySelectorAll('#benchmarkList .dynamic-item').forEach(item=>{const i=item.querySelectorAll('input');const n=i[0].value.trim(),a=i[1].value.trim();if(n)benchmarks.push({name:n,achievement:a})});
+  const upgrades=[];document.querySelectorAll('#upgradeList .dynamic-item').forEach(item=>{const i=item.querySelectorAll('input');const n=i[0].value.trim(),a=i[1].value.trim();if(n)upgrades.push({name:n,approach:a})});
+  const progress={};
+  STAGE_KEYS.forEach(k=>{
+    const rows=document.querySelectorAll('#stageDatesForm .dynamic-item');
+    let exp='',act='';
+    rows.forEach(row=>{if(row.querySelector(`[data-stage="${k}"]`)){exp=row.querySelector(`[data-stage="${k}"][data-field="expected"]`).value;act=row.querySelector(`[data-stage="${k}"][data-field="actual"]`).value}});
+    const existing=(editingId&&projects.find(x=>x.id===editingId)?.progress?.[k])||null;
+    const st=existing?existing.status||0:0;
+    const fs=(act&&st===0)?2:st;
+    progress[k]={status:fs,expectedDate:exp,actualDate:act};
+  });
+
+  const actionLabel=editingId?'编辑':'创建';
+  const logEntry=mkLog(`${actionLabel}项目`,name,`${actionLabel}「${name}」${type==='premium'?'精品':'基础'}剧本`);
+
+  let project;
+  if(editingId){
+    const p=projects.find(x=>x.id===editingId);
+    if(!p)return;
+    Object.assign(p,{name,type,startDate,expectedDate,actualDate,overallStatus,mainPerson,chiefEditor,deputyEditor,leadWriter,benchmarks,upgrades,progress,_updatedBy:currentUser.name,_updatedAt:new Date().toLocaleString()});
+    project=p;
+    await apiPost('/api/projects',{project,action:'update',logEntry}).catch(()=>{});
+  }else{
+    project={id:'p'+Date.now(),name,type,startDate,expectedDate,actualDate,overallStatus:overallStatus||'active',mainPerson,chiefEditor,deputyEditor,leadWriter,benchmarks,upgrades,progress,_updatedBy:currentUser.name,_updatedAt:new Date().toLocaleString()};
+    await apiPost('/api/projects',{project,action:'create',logEntry}).catch(()=>{projects.push(project)});
+  }
+  closeModal();
+}
+
+/* ═══════════ Progress ═══════════ */
+function openStatusSelector(e,pid,sk){e.stopPropagation();const p=projects.find(x=>x.id===pid);if(!p||!canEdit(p)){alert('只有项目成员才能修改进度');return};currentProgressProject=pid;currentProgressStage=sk;const sel=document.getElementById('statusSelector');sel.classList.add('show');const rect=e.currentTarget.getBoundingClientRect();sel.style.left=Math.min(rect.left,window.innerWidth-140)+'px';sel.style.top=(rect.bottom+window.scrollY+6)+'px'}
+
+async function setProgressStatus(status){
+  if(!currentProgressProject||!currentProgressStage)return;
+  const p=projects.find(x=>x.id===currentProgressProject);
+  if(p){
+    if(!p.progress[currentProgressStage])p.progress[currentProgressStage]={status:0,expectedDate:'',actualDate:''};
+    p.progress[currentProgressStage].status=status;
+    if(status===2&&!p.progress[currentProgressStage].actualDate)p.progress[currentProgressStage].actualDate=new Date().toISOString().slice(0,10);
+    p._updatedBy=currentUser.name;p._updatedAt=new Date().toLocaleString();
+    const logEntry=mkLog('更新进度',p.name,`${STAGE_LABELS[currentProgressStage]} → ${STATUS_LABEL[status]}`);
+    await apiPost('/api/projects',{project:p,action:'update',logEntry}).catch(()=>{});
+    setTimeout(()=>{const card=document.getElementById('card-'+currentProgressProject);if(card)card.classList.add('expanded')},200);
+  }
+  document.getElementById('statusSelector').classList.remove('show');
+  currentProgressProject=null;currentProgressStage=null;
+}
+
+document.addEventListener('click',function(e){const sel=document.getElementById('statusSelector');if(sel.classList.contains('show')&&!e.target.closest('.status-selector')&&!e.target.closest('.progress-node'))sel.classList.remove('show')});
+
+/* ═══════════ Mark Done ═══════════ */
+async function markDone(id){
+  const p=projects.find(x=>x.id===id);if(!p)return;
+  if(!canEdit(p)){alert('只有项目成员才能标记交稿');return}
+  if(p.actualDate){p.actualDate='';p.overallStatus='active'}else{p.actualDate=new Date().toISOString().slice(0,10);p.overallStatus='done'}
+  p._updatedBy=currentUser.name;p._updatedAt=new Date().toLocaleString();
+  const logEntry=mkLog(p.actualDate?'标记交稿':'取消交稿',p.name,p.actualDate?`实际交稿: ${p.actualDate}`:'恢复为进行中');
+  await apiPost('/api/projects',{project:p,action:'update',logEntry}).catch(()=>{});
+  setTimeout(()=>{const card=document.getElementById('card-'+id);if(card)card.classList.add('expanded')},200);
+}
+
+/* ═══════════ Delete ═══════════ */
+function deleteProject(id){
+  const p=projects.find(x=>x.id===id);if(!p)return;
+  if(!canEdit(p)){alert('只有项目成员才能删除项目');return}
+  confirmAction('确认删除？',`将删除项目「${p.name}」，此操作不可撤销。`,async()=>{
+    const logEntry=mkLog('删除项目',p.name,'项目已删除');
+    await apiDelete('/api/projects/'+id,{logEntry}).catch(()=>{})
+  })
+}
+
+/* ═══════════ Clear Samples ═══════════ */
+function clearSamples(){
+  const sampleIds=['s1','s2','s3','s4','s5'];
+  confirmAction('清空示例数据？',`将清除 ${sampleIds.length} 条示例项目，用户自行创建的项目将保留。`,async()=>{
+    const filtered=projects.filter(p=>!sampleIds.includes(p.id));
+    const logEntry=mkLog('清空示例','','清空了预置示例数据');
+    await apiPut('/api/projects',{projects:filtered,logEntry}).catch(()=>{projects=filtered})
+  })
+}
+
+/* ═══════════ Confirm ═══════════ */
+function confirmAction(title,text,cb){
+  document.getElementById('confirmTitle').textContent=title;
+  document.getElementById('confirmText').textContent=text;
+  confirmCallback=cb;
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+function hideConfirm(){document.getElementById('confirmOverlay').classList.remove('show');confirmCallback=null}
+async function executeConfirm(){if(confirmCallback){await confirmCallback();confirmCallback=null}document.getElementById('confirmOverlay').classList.remove('show')}
+
+/* ═══════════ Export / Import ═══════════ */
+function exportData(){
+  const data=JSON.stringify({projects,archives,activityLog,exportedAt:new Date().toLocaleString(),exportedBy:currentUser?currentUser.name:'系统'},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='剧本工作室协作版_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  // Log via API
+  const logEntry=mkLog('导出数据','','导出完整的项目与归档数据');
+  apiPost('/api/projects',{project:{id:'_noop'},action:'update',logEntry}).catch(()=>{});
+}
+
+async function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    try{
+      const data=JSON.parse(ev.target.result);
+      const importProjects=data.projects||data;
+      if(!Array.isArray(importProjects))throw new Error('格式错误');
+      const pCount=importProjects.length;
+      const aCount=data.archives?Object.keys(data.archives).length:0;
+      confirmAction('确认导入？',`将覆盖当前数据。项目: ${pCount} 条，归档: ${aCount} 个，日志: ${(data.activityLog||[]).length} 条。建议先导出当前数据备份。`,async()=>{
+        const logEntry=mkLog('导入数据','','从备份文件恢复数据');
+        await apiPut('/api/data',{projects:data.projects||importProjects,archives:data.archives||{},activityLog:data.activityLog||[]}).catch(()=>{});
+        // Also log
+        try{await apiPost('/api/projects',{project:{id:'_noop'},action:'update',logEntry})}catch(e){}
+      })
+    }catch(err){alert('文件格式错误，请选择正确的 JSON 备份文件')}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+/* ═══════════ Report Overlay ═══════════ */
+function closeReport(){document.getElementById('reportOverlay').classList.remove('show')}
+function copyReport(){const text=document.getElementById('reportContent').textContent;navigator.clipboard.writeText(text).then(()=>alert('已复制到剪贴板')).catch(()=>alert('复制失败，请手动选择复制'))}
+
+/* ═══════════ Utils ═══════════ */
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function canEdit(p){
+  if(!currentUser)return false;
+  if(currentUser.role==='负责人')return true;
+  return [p.mainPerson,p.chiefEditor,p.deputyEditor,p.leadWriter].some(n=>n===currentUser.name);
+}
+
+/* ═══════════ Init ═══════════ */
+initLogin();
+
+document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal()});
+document.getElementById('reportOverlay').addEventListener('click',function(e){if(e.target===this)closeReport()});
+document.getElementById('confirmOverlay').addEventListener('click',function(e){if(e.target===this)hideConfirm()});
+document.getElementById('archiveDetailOverlay').addEventListener('click',function(e){if(e.target===this)closeArchiveDetail()});
+document.getElementById('shareModalOverlay').addEventListener('click',function(e){if(e.target===this)closeShareModal()});
+</script>
+</body>
+</html>
