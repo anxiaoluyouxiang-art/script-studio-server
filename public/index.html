@@ -397,6 +397,9 @@ input,select,textarea{font-size:16px;font-family:inherit}
     <button class="tab" data-tab="logs" onclick="switchTab('logs')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>操作日志
     </button>
+    <button class="tab" data-tab="progress" id="btnProgressTab" onclick="switchTab('progress')" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>进度看板
+    </button>
   </div>
 
   <!-- Tab: Projects -->
@@ -447,6 +450,16 @@ input,select,textarea{font-size:16px;font-family:inherit}
     <div style="margin-top:12px">
       <button class="btn btn-danger btn-sm" onclick="clearLogs()">清空日志</button>
     </div>
+  </div>
+
+  <!-- Tab: Progress (admin only) -->
+  <div class="tab-panel" id="panel-progress">
+    <div class="section-title" style="margin-bottom:8px;display:flex;align-items:center;gap:6px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+      进度看板（负责人专属）
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">精品本与基础本分两段展示，每行展示项目、编剧、五阶段进度与负责人备注。备注失焦自动保存。</div>
+    <div id="progressBoardView"></div>
   </div>
 </div>
 
@@ -864,6 +877,7 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
   // Permissions
   const isAdmin=currentUser.role==='负责人';
   document.getElementById('btnMemberMgmt').style.display=isAdmin?'':'none';
+  document.getElementById('btnProgressTab').style.display=isAdmin?'':'none';
   document.getElementById('btnExport').style.display=isAdmin?'':'none';
   document.getElementById('btnExportTable').style.display=isAdmin?'':'none';
   document.getElementById('btnImport').style.display=isAdmin?'':'none';
@@ -921,6 +935,7 @@ function renderCurrentTab(){
   if(activeTab==='collab')renderCollab();
   if(activeTab==='archives')renderArchives();
   if(activeTab==='logs')renderLogs();
+  if(activeTab==='progress')renderProgressBoard();
 }
 
 function switchTab(tab){
@@ -1225,6 +1240,133 @@ function renderLogs(){
 
 async function clearLogs(){
   confirmAction('清空操作日志？','将清除所有操作记录，不可恢复。',async()=>{await apiDelete('/api/logs').catch(()=>{})})
+}
+
+/* ═══════════ Progress Board (admin only) ═══════════ */
+const PROGRESS_DOT_CLS={0:'dot-wait',1:'dot-doing',2:'dot-done',3:'dot-fix'};
+let _adminNoteTimers={};
+
+function renderProgressBoard(){
+  if(!currentUser||currentUser.role!=='负责人'){
+    document.getElementById('progressBoardView').innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">仅负责人可查看</div>';
+    return;
+  }
+  // 记住当前正在编辑的 textarea，避免被 SSE 重渲染打断输入
+  const focusedId=(document.activeElement&&document.activeElement.tagName==='TEXTAREA'&&document.activeElement.dataset&&document.activeElement.dataset.pid)||null;
+  const premiumProjects=projects.filter(p=>p.type==='premium');
+  const basicProjects=projects.filter(p=>p.type==='basic');
+  const doneProjects=projects.filter(p=>p.overallStatus==='done');
+
+  function stageDots(p){
+    return STAGE_KEYS.map(k=>{
+      const s=p.progress&&p.progress[k];
+      const cls=PROGRESS_DOT_CLS[s?s.status||0:'0']||'dot-wait';
+      const tip=STAGE_LABELS[k]+': '+(s?STATUS_LABEL[s.status||0]:'未开始');
+      return `<span class="dot ${cls}" title="${tip}" style="display:inline-block;width:14px;height:14px;margin-right:2px;cursor:help"></span>`;
+    }).join('');
+  }
+
+  function row(p){
+    const isDone=p.overallStatus==='done';
+    const note=p.adminNote||'';
+    return `
+      <div class="progress-row${isDone?' is-done':''}" data-pid="${p.id}" style="display:grid;grid-template-columns:minmax(140px,1.4fr) auto minmax(80px,1fr) minmax(180px,1.6fr) minmax(180px,2fr);gap:10px;padding:10px 12px;align-items:center;border-bottom:1px solid var(--border);font-size:13px">
+        <div style="font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="javascript:void(0)" onclick="openModal('${p.id}')" style="color:inherit;text-decoration:none;border-bottom:1px dashed var(--border)">${esc(p.name)}</a>${isDone?' <span style="font-size:11px;color:var(--success);font-weight:700">✓ 完成</span>':''}</div>
+        <span class="card-type ${p.type==='premium'?'type-premium':'type-basic'}">${p.type==='premium'?'精品':'基础'}</span>
+        <div style="color:var(--text2)">${p.leadWriter?esc(p.leadWriter):'<span style="color:var(--text3);font-style:italic">未指派</span>'}</div>
+        <div>${stageDots(p)}<span style="font-size:11px;color:var(--text3);margin-left:4px">${STAGE_LABELS.fullbook}</span></div>
+        <textarea data-pid="${p.id}" rows="1" placeholder="备注（失焦自动保存）" oninput="autoSizeNote(this);scheduleAdminNote('${p.id}',this)" onblur="flushAdminNote('${p.id}',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;min-height:30px;background:var(--bg);color:var(--text);box-sizing:border-box">${esc(note)}</textarea>
+      </div>`;
+  }
+
+  function section(title,count,list,color){
+    return `
+      <div style="margin-bottom:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--card);border-radius:8px 8px 0 0;border:1px solid var(--border);border-bottom:none">
+          <div style="font-weight:700;color:${color};font-size:14px">📕 ${title}（${count}）</div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(140px,1.4fr) auto minmax(80px,1fr) minmax(180px,1.6fr) minmax(180px,2fr);gap:10px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-bottom:none;font-size:11px;font-weight:600;color:var(--text3)">
+          <div>项目</div><div>类型</div><div>编剧</div><div>5 阶段进度</div><div>负责人备注</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px">
+          ${list.length?list.map(row).join(''):'<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">暂无项目</div>'}
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('progressBoardView').innerHTML=`
+    ${section('精品剧本',premiumProjects.length,premiumProjects,'var(--premium)')}
+    ${section('基础剧本',basicProjects.length,basicProjects,'var(--basic)')}
+    <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 14px;background:var(--card);border-radius:8px;border:1px solid var(--border);font-size:12px;color:var(--text2)">
+      <span>精品 <b style="color:var(--premium);font-size:14px">${premiumProjects.length}</b></span>
+      <span>基础 <b style="color:var(--basic);font-size:14px">${basicProjects.length}</b></span>
+      <span>已完成 <b style="color:var(--success);font-size:14px">${doneProjects.length}</b></span>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost btn-sm" onclick="exportProgressCsv()">导出 CSV</button>
+    </div>`;
+  // initial auto-size
+  document.querySelectorAll('.progress-row textarea').forEach(t=>autoSizeNote(t));
+  // 恢复上一次正在输入的 textarea 焦点
+  if(focusedId){
+    const ta=document.querySelector(`.progress-row[data-pid="${focusedId}"] textarea`);
+    if(ta){ta.focus();autoSizeNote(ta)}
+  }
+}
+
+function autoSizeNote(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,120)+'px';
+}
+
+function scheduleAdminNote(id,el){
+  if(_adminNoteTimers[id])clearTimeout(_adminNoteTimers[id]);
+  _adminNoteTimers[id]=setTimeout(()=>saveAdminNote(id,el.value),1500);
+}
+
+async function flushAdminNote(id,val){
+  if(_adminNoteTimers[id]){clearTimeout(_adminNoteTimers[id]);delete _adminNoteTimers[id]}
+  await saveAdminNote(id,val);
+}
+
+async function saveAdminNote(id,note){
+  const p=projects.find(x=>x.id===id);
+  if(!p)return;
+  if((p.adminNote||'')===note)return;
+  const updated={...p,adminNote:note,_updatedBy:currentUser.name,_updatedAt:new Date().toLocaleString()};
+  try{
+    await apiPost('/api/projects',{action:'update',project:updated});
+    // 乐观更新本地，避免等待 SSE
+    const idx=projects.findIndex(x=>x.id===id);
+    if(idx>=0)projects[idx]=updated;
+  }catch(e){console.warn('保存备注失败',e)}
+}
+
+async function exportProgressCsv(){
+  const rows=[['类型','项目名','编剧','负责人','大纲','集纲','一卡','二卡','全本','状态','负责人备注']];
+  ['premium','basic'].forEach(t=>{
+    projects.filter(p=>p.type===t).forEach(p=>{
+      const stages=STAGE_KEYS.map(k=>{
+        const s=p.progress&&p.progress[k];
+        return s?STATUS_LABEL[s.status||0]:'未开始';
+      });
+      rows.push([
+        t==='premium'?'精品':'基础',
+        p.name||'',
+        p.leadWriter||'',
+        p.mainPerson||'',
+        ...stages,
+        p.overallStatus==='done'?'已完成':'进行中',
+        (p.adminNote||'').replace(/\n/g,' ')
+      ]);
+    });
+  });
+  const csv='\uFEFF'+rows.map(r=>r.map(c=>'"'+(c+'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`进度看板_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 /* ═══════════ Backup Reminder ═══════════ */
