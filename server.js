@@ -229,6 +229,11 @@ app.post('/api/archive/:ym', (req, res) => {
   res.json({ success: true });
 });
 
+// GET /api/users — fetch current member list (for login page)
+app.get('/api/users', (req, res) => {
+  res.json({ users: store.users, workspaceName: store.workspaceName });
+});
+
 // PUT /api/users — update user list (admin only)
 app.put('/api/users', (req, res) => {
   store.users = req.body.users;
