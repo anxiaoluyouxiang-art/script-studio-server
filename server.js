@@ -57,7 +57,87 @@ function saveToDisk() {
     try {
       fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2));
     } catch(e) { console.error('Save to disk failed:', e.message); }
+    // 触发 GitHub 自动备份（异步，不阻塞）
+    if (BACKUP_TOKEN && BACKUP_REPO) {
+      clearTimeout(backupTimer);
+      backupTimer = setTimeout(backupToGitHub, 1000);
+    }
   }, 2000);
+}
+
+// ═══════════ GitHub Auto Backup ═══════════
+// 防丢失机制：每次数据变动后异步同步到 GitHub 备份仓库
+const BACKUP_TOKEN = process.env.BACKUP_TOKEN || '';
+const BACKUP_REPO  = process.env.BACKUP_REPO  || '';   // 格式: owner/repo
+const BACKUP_BRANCH = process.env.BACKUP_BRANCH || 'main';
+let lastBackupSha = null;
+let backupTimer = null;
+let backupInProgress = false;
+let backupDirty = false;
+let backupCount = 0;
+
+async function backupToGitHub() {
+  if (!BACKUP_TOKEN || !BACKUP_REPO) return;
+  if (backupInProgress) { backupDirty = true; return; }
+  backupInProgress = true;
+  try {
+    const content = JSON.stringify(store, null, 2);
+    const contentBase64 = Buffer.from(content).toString('base64');
+
+    // 读取现有 SHA（用于覆盖）
+    if (!lastBackupSha) {
+      try {
+        const getResp = await fetch(
+          `https://api.github.com/repos/${BACKUP_REPO}/contents/data.json?ref=${BACKUP_BRANCH}`,
+          { headers: { 'Authorization': `Bearer ${BACKUP_TOKEN}`, 'Accept': 'application/vnd.github+json', 'User-Agent': 'script-studio-server' } }
+        );
+        if (getResp.ok) lastBackupSha = (await getResp.json()).sha;
+      } catch (e) { /* 文件不存在也正常 */ }
+    }
+
+    const putResp = await fetch(
+      `https://api.github.com/repos/${BACKUP_REPO}/contents/data.json`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${BACKUP_TOKEN}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'script-studio-server'
+        },
+        body: JSON.stringify({
+          message: `auto-backup ${new Date().toISOString()} (#${++backupCount})`,
+          content: contentBase64,
+          branch: BACKUP_BRANCH,
+          sha: lastBackupSha || undefined
+        })
+      }
+    );
+
+    if (putResp.ok) {
+      const result = await putResp.json();
+      lastBackupSha = result.content.sha;
+      console.log(`[GitHub备份] ✅ 同步成功 #${backupCount} (${(content.length/1024).toFixed(1)}KB)`);
+    } else {
+      const errText = await putResp.text();
+      // SHA 过期冲突，重置后下次自动重试
+      if (putResp.status === 409 || putResp.status === 422) {
+        console.warn('[GitHub备份] SHA冲突，下次重试');
+        lastBackupSha = null;
+      } else {
+        console.error('[GitHub备份] 失败:', putResp.status, errText.slice(0, 200));
+      }
+    }
+  } catch (e) {
+    console.error('[GitHub备份] 异常:', e.message);
+  } finally {
+    backupInProgress = false;
+    // 如果期间有新数据变动，再来一次
+    if (backupDirty) {
+      backupDirty = false;
+      setTimeout(backupToGitHub, 5000);
+    }
+  }
 }
 
 // ═══════════ SSE Clients ═══════════
@@ -218,6 +298,11 @@ app.listen(PORT, () => {
   console.log('🎬 剧本工作室实时协作服务器已启动');
   console.log('   地址: http://localhost:' + PORT);
   console.log('   在线人数: ' + sseClients.size);
+  if (BACKUP_TOKEN && BACKUP_REPO) {
+    console.log('   🛡️  GitHub 自动备份: 已启用 → ' + BACKUP_REPO);
+  } else {
+    console.log('   ⚠️  GitHub 自动备份: 未启用（设置 BACKUP_TOKEN + BACKUP_REPO 环境变量启用）');
+  }
 });
 
 // Graceful shutdown
