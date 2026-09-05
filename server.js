@@ -293,6 +293,49 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ═══════════ Startup Restore from GitHub Backup ═══════════
+// 关键防丢失闭环：Render 免费版文件系统是临时的，重启/重部署后本地 data.json 会被清空。
+// 若启动时发现数据是示例数据（id 为 s1~s5），说明真实数据丢了，自动从备份仓库拉回覆盖。
+function normalizeStore(raw) {
+  const defaults = { projects: [], archives: {}, activityLog: [], users: DEFAULT_USERS.map(u=>({...u})), workspaceName: '豆豆王西安工作室' };
+  const merged = { ...defaults, ...raw };
+  if (!Array.isArray(merged.projects)) merged.projects = [];
+  if (!merged.archives || typeof merged.archives !== 'object') merged.archives = {};
+  if (!Array.isArray(merged.activityLog)) merged.activityLog = [];
+  if (!Array.isArray(merged.users) || !merged.users.length) merged.users = DEFAULT_USERS.map(u=>({...u}));
+  if (!merged.workspaceName) merged.workspaceName = '豆豆王西安工作室';
+  return merged;
+}
+
+async function startupRestore() {
+  // 是否仍处于示例数据状态（真实项目 id 为 'p'+时间戳，示例为 's1'~'s5'）
+  const isSampleOnly = !store.projects.length || store.projects.every(p => /^s\d+$/.test(p.id));
+  if (!isSampleOnly) return; // 已有真实数据，跳过
+  if (!BACKUP_TOKEN || !BACKUP_REPO) return;
+  try {
+    const resp = await fetch(
+      `https://api.github.com/repos/${BACKUP_REPO}/contents/data.json?ref=${BACKUP_BRANCH}`,
+      { headers: { 'Authorization': `Bearer ${BACKUP_TOKEN}`, 'Accept': 'application/vnd.github+json', 'User-Agent': 'script-studio-server' } }
+    );
+    if (resp.ok) {
+      const file = await resp.json();
+      if (!file.content) return;
+      const raw = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
+      if (raw.projects && raw.projects.length && raw.projects.some(p => !/^s\d+$/.test(p.id))) {
+        store = normalizeStore(raw);
+        console.log('✅ [启动恢复] 从 GitHub 备份恢复:', store.projects.length, '个项目,', Object.keys(store.archives).length, '个归档');
+        saveToDisk();
+      } else {
+        console.log('⚠️ [启动恢复] 备份中无真实数据，保留当前示例数据');
+      }
+    } else {
+      console.log('⚠️ [启动恢复] 备份仓库暂无可恢复数据 (status ' + resp.status + ')');
+    }
+  } catch (e) {
+    console.error('[启动恢复] 拉取备份失败:', e.message);
+  }
+}
+
 // ═══════════ Start Server ═══════════
 app.listen(PORT, () => {
   console.log('🎬 剧本工作室实时协作服务器已启动');
@@ -303,6 +346,7 @@ app.listen(PORT, () => {
   } else {
     console.log('   ⚠️  GitHub 自动备份: 未启用（设置 BACKUP_TOKEN + BACKUP_REPO 环境变量启用）');
   }
+  startupRestore(); // 启动即检查是否需要从备份恢复
 });
 
 // Graceful shutdown
